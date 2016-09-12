@@ -16,18 +16,19 @@ import java.util.List;
 
 public class GoogleBookFetch {
     private MySQLConnector mySQLConnector = null;
+    private static String API_KEY = "AIzaSyBMhlOsfxAeH-ejvSv-CxzkMi1goV5VfA0"; //Quota Limit is 1000 per Day for this key
 
     public GoogleBookFetch() {
-        mySQLConnector = new MySQLConnector("192.168.134.55", "3306", "BookBase", "root", "");
+        mySQLConnector = new MySQLConnector("localhost", "3306", "BookBase", "root", "");
     }
 
     public void getBooksMetadataForAuthor(String author) {
         try {
             URL url = new URL("https://www.googleapis.com/books/v1/volumes?q=inauthor:" + author.replace(" ", "+") +
-                    "&filter=paid-ebooks&subject:fiction&&maxResults=40");
+                    "&filter=paid-ebooks&langRestrict=en&maxResults=40&key=" + API_KEY);
             List<Book> books = populateBookList(requestMetadata(url), author);
             int bookCount = populateBookDatabase(books);
-            System.out.println(bookCount + "Book(s) added for Author " + author);
+            System.out.println(bookCount + " book(s) added for Author " + author);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -41,8 +42,8 @@ public class GoogleBookFetch {
             //System.out.println("TotalResult:" + bookMeta.get("totalItems"));
             return (JSONArray) bookMeta.get("items");
         } catch (IOException | ParseException e) {
-            System.out.println(e.getMessage());
-            return null;
+            System.out.println("Error Occurred in requestMetadata(): " + e.getMessage());
+            return new JSONArray();
         }
     }
 
@@ -51,9 +52,9 @@ public class GoogleBookFetch {
         for (Object item : items) {
             JSONObject volumeInfo = (JSONObject) ((JSONObject) item).get("volumeInfo");
             String bookAuthor = jsonArrayToString((JSONArray) volumeInfo.get("authors"));
-            if (bookAuthor.contains(author)) {
+            if (bookAuthor != null && bookAuthor.contains(author)) {
                 Book book = new Book();
-                book.setTitle((String) volumeInfo.get("title"));
+                book.setTitle(volumeInfo.get("title").toString());
                 book.setPublisher((String) volumeInfo.get("publisher"));
                 book.setDescription((String) volumeInfo.get("description"));
                 book.setAuthors(bookAuthor);
@@ -82,26 +83,37 @@ public class GoogleBookFetch {
     }
 
     private long getISBN(JSONArray jsonArray) {
-        if (jsonArray != null) {
-            JSONObject identifier = (JSONObject) jsonArray.get(0);
-            if (!identifier.get("type").equals("ISBN_13")) {
-                identifier = (JSONObject) jsonArray.get(1);
+        if (jsonArray != null && jsonArray.size() > 0) {
+            for(Object object : jsonArray){
+                JSONObject identifier = (JSONObject) object;
+                if (identifier.get("type").equals("ISBN_13")) {
+                    return Long.parseLong(identifier.get("identifier").toString());
+                }
             }
-            return Long.parseLong(identifier.get("identifier").toString());
-        } else {
-            return 55;
         }
+        return 0;
     }
 
     private int populateBookDatabase(List<Book> books) {
         if(books != null) {
             int bookCount = books.size();
             if (bookCount > 0){
+                String description;
+                String title;
                 String insertQuery = "INSERT INTO books (Title, Authors, Categories, Publisher, Description, ISBN) VALUES";
                 for (Book book : books) {
-                    insertQuery += " (\"" + book.getTitle() + "\", \"" + book.getAuthors() + "\", \"" +
-                            book.getCategories() + "\", \"" + book.getPublisher() + "\", \"" +
-                            book.getDescription().replace("'", "\\\'") + "\", " + book.getISBN() + "), ";
+                    title = book.getTitle();
+                    if(title != null) {
+                        title = title.replace("'", "\\\'");
+                        title = title.replace("\"", "\\\"");
+                    }
+                    description = book.getDescription();
+                    if(description != null) {
+                        description = description.replace("'", "\\\'");
+                        description = description.replace("\"", "\\\"");
+                    }
+                    insertQuery += " (\"" + title + "\", \"" + book.getAuthors() + "\", \"" + book.getCategories() +
+                            "\", \"" + book.getPublisher() + "\", \"" + description + "\", " + book.getISBN() + "), ";
                 }
                 insertQuery = insertQuery.substring(0, insertQuery.length() - 2);
                 insertQuery = insertQuery + ";";

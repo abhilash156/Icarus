@@ -22,10 +22,9 @@ public class MySQLConnector {
     private Connection getConnection() {
         if (connection == null) {
             try {
-                Class.forName("com.mysql.jdbc.Driver");
-                connection = DriverManager.getConnection("jdbc:mysql://" + address + ":" + port + "/" + database,
-                        username, password);
-            } catch (SQLException | ClassNotFoundException e) {
+                connection = DriverManager.getConnection("jdbc:mysql://" + address + ":" + port + "/" + database +
+                                "?useSSL=false", username, password);
+            } catch (SQLException e) {
                 System.out.println("Error Occurred in getConnection(): + " + e.getMessage());
             }
         }
