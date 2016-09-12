@@ -6,7 +6,7 @@ public class Book {
     private String categories;
     private String publisher;
     private String description;
-    private String isbn;
+    private long isbn;
 
     @Override
     public String toString() {
@@ -36,11 +36,11 @@ public class Book {
         this.description = description;
     }
 
-    public String getISBN() {
+    public long getISBN() {
         return isbn;
     }
 
-    public void setISBN(String isbn) {
+    public void setISBN(long isbn) {
         this.isbn = isbn;
     }
 
