@@ -21,7 +21,7 @@ public class GoogleBookFetch {
         mySQLConnector = new MySQLConnector("192.168.134.55", "3306", "BookBase", "root", "");
     }
 
-    private void getBooksMetadataForAuthor(String author) {
+    public void getBooksMetadataForAuthor(String author) {
         try {
             URL url = new URL("https://www.googleapis.com/books/v1/volumes?q=inauthor:" + author.replace(" ", "+") +
                     "&filter=paid-ebooks&subject:fiction&&maxResults=40");
@@ -94,23 +94,22 @@ public class GoogleBookFetch {
     }
 
     private int populateBookDatabase(List<Book> books) {
-        int bookCount = books.size();
-        if(books != null && bookCount > 0) {
-            String insertQuery = "INSERT INTO books (Title, Authors, Categories, Publisher, Description, ISBN) VALUES";
-            for (Book book : books) {
-                insertQuery += " (\"" + book.getTitle() + "\", \"" + book.getAuthors() + "\", \"" +
-                        book.getCategories() + "\", \"" + book.getPublisher() + "\", \"" +
-                        book.getDescription().replace("'", "\\\'") + "\", " + book.getISBN() + "), ";
+        if(books != null) {
+            int bookCount = books.size();
+            if (bookCount > 0){
+                String insertQuery = "INSERT INTO books (Title, Authors, Categories, Publisher, Description, ISBN) VALUES";
+                for (Book book : books) {
+                    insertQuery += " (\"" + book.getTitle() + "\", \"" + book.getAuthors() + "\", \"" +
+                            book.getCategories() + "\", \"" + book.getPublisher() + "\", \"" +
+                            book.getDescription().replace("'", "\\\'") + "\", " + book.getISBN() + "), ";
+                }
+                insertQuery = insertQuery.substring(0, insertQuery.length() - 2);
+                insertQuery = insertQuery + ";";
+                mySQLConnector.executeQuery(insertQuery);
             }
-            insertQuery = insertQuery.substring(0, insertQuery.length() - 2);
-            insertQuery = insertQuery + ";";
-            mySQLConnector.executeQuery(insertQuery);
+            return bookCount;
+        } else {
+            return 0;
         }
-        return bookCount;
-    }
-
-    public static void main(String[] args) {
-        GoogleBookFetch googleBookFetch = new GoogleBookFetch();
-        googleBookFetch.getBooksMetadataForAuthor("Dan Brown");
     }
 }
