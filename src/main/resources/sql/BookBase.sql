@@ -1,7 +1,6 @@
-DROP DATABASE  BookBase;
-CREATE DATABASE BookBase;
+CREATE DATABASE IF NOT EXISTS BookBase;
 USE BookBase;
-CREATE TABLE books (
+CREATE TABLE IF NOT EXISTS books (
 	BookID bigint(20) NOT NULL AUTO_INCREMENT,
     Title longtext NOT NULL,
     Authors longtext NOT NULL,
